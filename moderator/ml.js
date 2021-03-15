@@ -65,11 +65,11 @@ function train_test_split(dataset, seed="$$$", maxlen=1000, test_size=0.25) {
         }
     });
 
-    let n_test = (maxlen / test_size) * 100;
-    let n_train = maxlen - n_test; 
+    let n_test = (maxlen * test_size);
+    let n_train = maxlen - n_test;
 
     let train_els = dataset.slice(0, n_train);
-    let test_els = dataset.slice(n_train, n_test);
+    let test_els = dataset.slice(n_train, maxlen);
 
     let obj = {
         X_train : [],
@@ -104,13 +104,17 @@ function train_test_split(dataset, seed="$$$", maxlen=1000, test_size=0.25) {
         dataset[i] = line;
     }
 
+    // split data
     let data = train_test_split(dataset);
 
+    // init Tokenizer and build the vocabulary
     let tk = new tokenizer(dataset);
 
+    // trasform texts to sequences
     let X_train = tk.texts_to_sequences(data.X_train, padding=50);
     let X_test = tk.texts_to_sequences(data.X_test, padding=50);
+
     // time = Math.floor(Date.now() / 1000) - time;
 
-    //console.log(`Process ended in ${time} seconds`);
+    // console.log(`Process ended in ${time} seconds`);
 })();
