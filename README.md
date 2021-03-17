@@ -1,5 +1,7 @@
-# moderator
-		Discord Bot generated with [create-discord-bot](https://github.com/HZooly/create-discord-bot)
+## Discord-Bot
+![](https://discord.bots.gg/img/logo_transparent_coloured.png =150x)
+This is just another ML Discord-bot. Coded in nodejs using keras and tensorflow modules.
+Its purpose is to manage a whole discord chat, analyzing messages, trying to find and remove offensive/hate speech from the channel.
 
-		To get the Bot invitation link, you can use [discord-bot-invitation](https://github.com/HZooly/discord-bot-invitation)
-	
+This bot is meant to be used for experimenting stuffs. Streambytes is using this project to learn JS/nodejs and a bit of Machine Learning.
+The bot is not optimized and totally not secured yet, feel free to use it on your own risk.
