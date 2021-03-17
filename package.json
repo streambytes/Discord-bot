@@ -6,9 +6,9 @@
     	"author": "create-discord-bot",
     	"dependencies": {
     	    	"@tensorflow/tfjs": "^3.3.0",
+    	    	"@tensorflow/tfjs-node": "^3.3.0",
     	    	"csv-parse": "^4.15.3",
     	    	"discord.js": "^11.3.2",
-    	    	"keras-js": "^1.0.3",
     	    	"scikit-learn": "^0.1.0",
     	    	"seedrandom": "^2.4.4"
     	}

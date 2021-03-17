@@ -1,7 +1,6 @@
 const seedrandom = require('seedrandom');
 const parse = require('csv-parse/lib/sync');
-const tfjs = require('@tensorflow/tfjs');
-const keras = require('keras-js');
+const tfjs = require('@tensorflow/tfjs-node');
 const fs = require('fs').promises;
 
 class tokenizer {
@@ -80,12 +79,12 @@ function train_test_split(dataset, seed="$$$", maxlen=1000, test_size=0.25) {
 
     train_els.forEach((el) => {
         obj['X_train'].push(el['tweet']);
-        obj['y_train'].push(el['label']);
+        obj['y_train'].push(el['class']);
     });
 
     test_els.forEach((el) => {
         obj['X_test'].push(el['tweet']);
-        obj['y_test'].push(el['label']);
+        obj['y_test'].push(el['class']);
     });
 
     return obj;
@@ -111,9 +110,50 @@ function train_test_split(dataset, seed="$$$", maxlen=1000, test_size=0.25) {
     let tk = new tokenizer(dataset);
 
     // trasform texts to sequences
-    let X_train = tk.texts_to_sequences(data.X_train, padding=50);
-    let X_test = tk.texts_to_sequences(data.X_test, padding=50);
+    let padding = 50;
+    
+    let X_train = tk.texts_to_sequences(data.X_train, padding=padding);
+    let X_test = tk.texts_to_sequences(data.X_test, padding=padding);
 
+    let outputDim = 50;
+    let inputDim = tk.vocab.length - 1;
+
+    // build the model
+    let model = tfjs.sequential();
+    model.add(tfjs.layers.embedding({
+        inputDim :inputDim, 
+        outputDim : outputDim, 
+        inputLength : padding, 
+        trainable : true
+    }));
+    model.add(tfjs.layers.globalMaxPooling1d());
+    model.add(tfjs.layers.dense({
+        units : 10, 
+        activation : 'relu', 
+        useBias : true
+    }));
+    model.add(tfjs.layers.dense({
+        units : 1, 
+        activation : 'sigmoid', 
+        useBias : true
+    }));
+
+    model.compile({
+        optimizer : 'adam', 
+        loss : tfjs.losses.sigmoidCrossEntropy, 
+        metrics :['accuracy']
+    });
+
+    // train the model
+    let history = await model.fit(tfjs.tensor(X_train), tfjs.tensor(data.y_train), {
+        epochs : 50,
+        validationData : (tfjs.tensor(X_test), tfjs.tensor(data.y_test)), 
+        verbose : 0
+    });
+
+    console.log(history.history);
+    
+    // check our results
     time = Math.floor(Date.now() / 1000) - time;
 
     console.log(`Process ended in ${time} seconds`);
