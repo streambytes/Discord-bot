@@ -92,7 +92,7 @@ function train_test_split(dataset, seed="$$$", maxlen=1000, test_size=0.25) {
 }
 
 (async function () {
-    // let time = Math.floor(Date.now() / 1000);
+    let time = Math.floor(Date.now() / 1000);
     const fileContent = await fs.readFile('dataset/labeled_data.csv');
     const dataset = parse(fileContent, {columns : true});
 
@@ -114,7 +114,7 @@ function train_test_split(dataset, seed="$$$", maxlen=1000, test_size=0.25) {
     let X_train = tk.texts_to_sequences(data.X_train, padding=50);
     let X_test = tk.texts_to_sequences(data.X_test, padding=50);
 
-    // time = Math.floor(Date.now() / 1000) - time;
+    time = Math.floor(Date.now() / 1000) - time;
 
-    // console.log(`Process ended in ${time} seconds`);
+    console.log(`Process ended in ${time} seconds`);
 })();
