@@ -1,5 +1,5 @@
 ## Discord-Bot
-<img src="icons/logo_bot.png" width="200">
+<img src="icons/logo_bot.png" style="text-align:center" width="300">
 This is just another ML Discord-bot. Coded in nodejs using keras and tensorflow modules.
 Its purpose is to manage a whole discord chat, analyzing messages, trying to find and remove offensive/hate speech from the channel.
 
