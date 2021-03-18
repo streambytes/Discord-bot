@@ -110,28 +110,30 @@ function train_test_split(dataset, seed="$$$", maxlen=1000, test_size=0.25) {
     let tk = new tokenizer(dataset);
 
     // trasform texts to sequences
-    let padding = 50;
+    let maxlen = 50;
     
-    let X_train = tk.texts_to_sequences(data.X_train, padding=padding);
-    let X_test = tk.texts_to_sequences(data.X_test, padding=padding);
+    let X_train = tk.texts_to_sequences(data.X_train, padding=maxlen);
+    let X_test = tk.texts_to_sequences(data.X_test, padding=maxlen);
 
-    let outputDim = 50;
-    let inputDim = tk.vocab.length - 1;
+    let embedding_dim = 50;
+    let vocab_size = tk.vocab.length;
 
     // build the model
     let model = tfjs.sequential();
     model.add(tfjs.layers.embedding({
-        inputDim :inputDim, 
-        outputDim : outputDim, 
-        inputLength : padding, 
+        inputDim :vocab_size, 
+        outputDim : embedding_dim, 
+        inputLength : maxlen, 
         trainable : true
     }));
+
     model.add(tfjs.layers.globalMaxPooling1d());
     model.add(tfjs.layers.dense({
         units : 10, 
         activation : 'relu', 
         useBias : true
     }));
+
     model.add(tfjs.layers.dense({
         units : 1, 
         activation : 'sigmoid', 
@@ -151,8 +153,6 @@ function train_test_split(dataset, seed="$$$", maxlen=1000, test_size=0.25) {
         verbose : 0
     });
 
-    console.log(history.history);
-    
     // check our results
     time = Math.floor(Date.now() / 1000) - time;
 
