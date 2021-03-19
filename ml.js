@@ -2,6 +2,7 @@ const seedrandom = require('seedrandom');
 const parse = require('csv-parse/lib/sync');
 const tfjs = require('@tensorflow/tfjs-node');
 const fs = require('fs').promises;
+const { TLSSocket } = require('tls');
 
 class tokenizer {
     constructor(dataset) {
@@ -94,7 +95,7 @@ function train_test_split(dataset, seed="$$$", maxlen=1000, test_size=0.25) {
     let time = Math.floor(Date.now() / 1000);
     const fileContent = await fs.readFile('dataset/labeled_data.csv');
     const dataset = parse(fileContent, {columns : true});
-
+    
     for (let i = 0; i < dataset.length; i++) {
         let line = {
             class : (dataset[i]['class'] == 2) ? 1 : 0,
@@ -102,15 +103,42 @@ function train_test_split(dataset, seed="$$$", maxlen=1000, test_size=0.25) {
         }
         dataset[i] = line;
     }
-
+     
     // split data
     let data = train_test_split(dataset);
 
     // init Tokenizer and build the vocabulary
     let tk = new tokenizer(dataset);
 
-    // trasform texts to sequences
     let maxlen = 50;
+
+    //Glove embedding
+    let file = (await fs.readFile("./glove.6B.50d.txt")).toString().split("\n");
+
+    let embeddings = {};
+    
+    for (let i = 0; i < file.length; i++) { 
+        let word = file[i].split(" ");
+        let x = word.slice(1, );
+        x = x.map(a => parseFloat(a));
+        embeddings[word[0]] = x;
+    }
+
+    embedding_matrix = [];
+
+    for (let o = 1; o < tk.vocab.length; o++) {
+        if (embeddings[tk.vocab[o]] && tk.vocab[o].length > 0) {                  
+            embedding_matrix.push(embeddings[tk.vocab[o]]);
+        } else {
+            let arr = new Array(maxlen).fill(0);
+            embedding_matrix.push(arr);
+        }
+    }
+
+    
+  
+    // trasform texts to sequences
+    
     
     let X_train = tk.texts_to_sequences(data.X_train, padding=maxlen);
     let X_test = tk.texts_to_sequences(data.X_test, padding=maxlen);
@@ -121,7 +149,7 @@ function train_test_split(dataset, seed="$$$", maxlen=1000, test_size=0.25) {
     
     // build the model
     let model = tfjs.sequential();
-    model.add(tfjs.layers.embedding({inputDim :vocab_size, outputDim : embedding_dim, inputLength : maxlen, trainable : true}));
+    model.add(tfjs.layers.embedding({inputDim :vocab_size, outputDim : embedding_dim, inputLength : maxlen, weights : embedding_matrix, trainable : false}));
     model.add(tfjs.layers.globalMaxPooling1d());
     model.add(tfjs.layers.dense({units : 10, activation : 'relu', useBias : true}));
     model.add(tfjs.layers.dense({units : 1, activation : 'sigmoid', useBias : true}));
@@ -136,6 +164,8 @@ function train_test_split(dataset, seed="$$$", maxlen=1000, test_size=0.25) {
         validationData : (tfjs.tensor(X_test), tfjs.tensor(data.y_test)), 
         verbose : 0
     });
+
+    console.log(history.history);
     
     // check our results
     time = Math.floor(Date.now() / 1000) - time;
