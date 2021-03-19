@@ -118,41 +118,25 @@ function train_test_split(dataset, seed="$$$", maxlen=1000, test_size=0.25) {
     let embedding_dim = 50;
     let vocab_size = tk.vocab.length;
 
+    
     // build the model
     let model = tfjs.sequential();
-    model.add(tfjs.layers.embedding({
-        inputDim :vocab_size, 
-        outputDim : embedding_dim, 
-        inputLength : maxlen, 
-        trainable : true
-    }));
-
+    model.add(tfjs.layers.embedding({inputDim :vocab_size, outputDim : embedding_dim, inputLength : maxlen, trainable : true}));
     model.add(tfjs.layers.globalMaxPooling1d());
-    model.add(tfjs.layers.dense({
-        units : 10, 
-        activation : 'relu', 
-        useBias : true
-    }));
+    model.add(tfjs.layers.dense({units : 10, activation : 'relu', useBias : true}));
+    model.add(tfjs.layers.dense({units : 1, activation : 'sigmoid', useBias : true}));
 
-    model.add(tfjs.layers.dense({
-        units : 1, 
-        activation : 'sigmoid', 
-        useBias : true
-    }));
-
-    model.compile({
-        optimizer : 'adam', 
-        loss : tfjs.losses.sigmoidCrossEntropy, 
-        metrics :['accuracy']
-    });
+    model.compile({optimizer : 'adam', loss : tfjs.losses.sigmoidCrossEntropy, metrics :['accuracy']});
 
     // train the model
+    let epochs = 50;
+    
     let history = await model.fit(tfjs.tensor(X_train), tfjs.tensor(data.y_train), {
-        epochs : 50,
+        epochs : epochs,
         validationData : (tfjs.tensor(X_test), tfjs.tensor(data.y_test)), 
         verbose : 0
     });
-
+    
     // check our results
     time = Math.floor(Date.now() / 1000) - time;
 
