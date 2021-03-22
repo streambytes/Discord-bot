@@ -2,20 +2,22 @@ const parse = require('csv-parse/lib/sync');
 const fs = require('fs').promises;
 const seedrandom = require('seedrandom');
 const tfjs = require('@tensorflow/tfjs-node');
+const util = require('util')
 
 class Tokenizer {
-    constructor(dataset) {
+    constructor(dataset, stopwords) {
         this.vocab = ["ksdafpdsngpdnagpkenpgneapngepng"];
-        this.buildVocab(dataset)
+        this.buildVocab(dataset, stopwords)
     }
 
     // build vocabulary
-    buildVocab(dataset) {
+    buildVocab(dataset, stopwords) {
         dataset.forEach(el => {
-            let words = el['tweet'].replace("\n", " ").split(" ");
+
+            let words = cleanUp(el['tweet']).replace("\n", " ").split(" ");
             words.forEach(word => {
                 word = word.toLowerCase();
-                if ((this.vocab.find(el => el == word) == undefined)) {
+                if ((stopwords.indexOf(word) === -1 ) && (this.vocab.find(el => el == word) == undefined)) {
                     this.vocab.push(word);
                 }
             });
@@ -25,13 +27,14 @@ class Tokenizer {
     // text to sequence
     text_to_sequence(text, maxlen=250) {
         text = text.toLowerCase();
-        let words = text.replace("\n", " ").split(" ");
+        let words = cleanUp(text).replace("\n", " ").split(" ");
         let seq = []
         words.forEach(word => {
             let idx = this.vocab.findIndex(el => el == word);
-            seq.push((idx > 0 ? idx : 0));
+            if (idx > 0)
+                seq.push(idx);
         });
-        
+
         if (seq.length > maxlen) seq = seq.slice(0, maxlen);
         let padding = maxlen - seq.length;
         for (let i = 0; i < padding; i++) {
@@ -53,7 +56,12 @@ class Tokenizer {
     }
 }
 
-class Sentiment_Analysis_Model {
+function cleanUp(phrase) {
+    phrase = phrase.replace(/[\!\"\#\$\%\&\(\)\*\+\,\.\/\:\;\<\=\>\?\@\[\\\]\^\_\`\{\|\}\~\-]/g, ' ');
+    return phrase
+}
+
+exports.Sentiment_Analysis_Model = class Sentiment_Analysis_Model {
     constructor() {
         return (async () => { 
             await this.initializeModel();
@@ -63,27 +71,25 @@ class Sentiment_Analysis_Model {
 
     // init function
     async initializeModel() {
-        const fileContent = await fs.readFile('dataset/imdb_labelled.txt');
-        // const dataset = parse(fileContent, {columns : true});
-    
-        let lines = fileContent.toString().split("\n");
-        let dataset = [];
+        const fileContent = await fs.readFile('dataset/cleaned_test_data_v1.csv');
+        const stopwords = (await fs.readFile('utils/stopwords.csv')).toString().split('\r\n');
+
+        const dataset = parse(fileContent, {columns : true});
     
         // Read from dataset
-        lines.forEach(line => {
-            let tmp = line.split("\t");
+        for (let i = 0; i < dataset.length; i++) {
             let obj = {
-                tweet : tmp[0],
-                class : parseInt(tmp[1])
+                tweet : dataset[i]['cleaned_tweet'],
+                class : (dataset[i]['subtask_a'] === "NOT") ? 1 : 0
             }
-            dataset.push(obj);
-        });
+            dataset[i] = obj;
+        }
     
         // split data
         let data = this.train_test_split(dataset);
     
         // init Tokenizer and build the vocabulary
-        this.tk = new Tokenizer(dataset);
+        this.tk = new Tokenizer(dataset, stopwords);
     
         let maxlen = 100;
     
@@ -93,7 +99,7 @@ class Sentiment_Analysis_Model {
     
         //Glove embedding
         let glove_len = 100;
-        lines = (await fs.readFile("dataset/glove.6B.100d.txt")).toString().split("\n");
+        let lines = (await fs.readFile("dataset/glove.6B.100d.txt")).toString().split("\n");
     
         let embeddings = {};
         
@@ -132,15 +138,17 @@ class Sentiment_Analysis_Model {
         this.model.compile({optimizer : 'adam', loss : tfjs.losses.sigmoidCrossEntropy, metrics :['accuracy']});
     
         // train the model
-        let epochs = 100;
+        let epochs = 300;
     
         let history = await this.model.fit(tfjs.tensor(X_train), tfjs.tensor(data.y_train), {
             epochs : epochs,
             validationData : [tfjs.tensor(X_test), tfjs.tensor(data.y_test)],
             verbose : 0
         });
-    
-        console.log(history.history);
+        
+        console.log(`Training Accuracy : ${history.history['acc'][history.history['acc'].length - 1]} - Validation Accuracy : ${history.history['val_acc'][history.history['val_acc'].length - 1]}\n`);
+        console.log("---- Bot Training session has been completed ----\n\n");
+
     }
 
     train_test_split(dataset, seed="$$$", maxlen=1000, test_size=0.25) {
@@ -185,17 +193,7 @@ class Sentiment_Analysis_Model {
         let s = this.tk.text_to_sequence(phrase, 100);
         let pred = this.model.predict(tfjs.tensor(s, [1, 100]));
         pred = await pred.data();
-        console.log(`\"${phrase}\" : ${pred}`);        
+        console.log(`\"${phrase}\" : ${pred}`);
+        return pred;        
     }
 }
-
-// test class
-(async () => {
-    let classifier = await new Sentiment_Analysis_Model();
-
-    let phrases = ["This movie is really bad. Poor production, low budget, awful story!", "It is an awesome production"];
-    phrases.forEach(async (phrase) => {
-        await classifier.predict(phrase);
-    });
-    
-})();
